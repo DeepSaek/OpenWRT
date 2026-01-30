@@ -69,7 +69,7 @@ jobs:
     - name: 下载OpenWRT及其他包代码
       id: download_code
       run: |
-        git config --unset http.https://github.com/.extraheader
+        git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
         REPO_URL=https://github.com/openwrt/openwrt
         git clone $REPO_URL openwrt
         cd openwrt
