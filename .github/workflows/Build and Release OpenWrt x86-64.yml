@@ -91,9 +91,9 @@ jobs:
         sed -i "s|^root:::0:99999:7:::|root:$HASH:0:0:99999:7:::|" package/base-files/files/etc/shadow
         cat package/base-files/files/etc/shadow
         ./scripts/feeds update -a
-        ./scripts/feeds install -a
         rm -rf feeds/packages/lang/golang
         cp -r ../gogogo/lang/golang/ feeds/packages/lang/
+        ./scripts/feeds install -a
         cp -r ../openwrt-passwall-packages/geoview/ package/geoview/
         git clone https://github.com/linkease/istore.git ./package/istore
         git clone https://github.com/linkease/nas-packages.git ./package/nas-packages
