@@ -93,6 +93,7 @@ jobs:
         ./scripts/feeds update -a
         rm -rf feeds/packages/lang/golang
         cp -r ../gogogo/lang/golang/ feeds/packages/lang/
+        ./scripts/feeds update -i
         ./scripts/feeds install -a
         cp -r ../openwrt-passwall-packages/geoview/ package/geoview/
         git clone https://github.com/linkease/istore.git ./package/istore
