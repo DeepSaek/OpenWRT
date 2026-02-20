@@ -91,6 +91,7 @@ jobs:
         sed -i "s|^root:::0:99999:7:::|root:$HASH:0:0:99999:7:::|" package/base-files/files/etc/shadow
         cat package/base-files/files/etc/shadow
         ./scripts/feeds update -a
+        ls -la feeds/packages/lang/golang/
         rm -rf feeds/packages/lang/golang
         cp -r ../gogogo/lang/golang/ feeds/packages/lang/
         ./scripts/feeds update -i
