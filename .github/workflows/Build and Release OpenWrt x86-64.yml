@@ -136,6 +136,14 @@ jobs:
             # 在编译脚本中，失败时通常应该退出
             # exit 1 
         }
+
+    - name: 修正 luci-app-store Makefile 
+      run: |
+        cd openwrt
+        echo "尝试修正 luci-app-store Makefile 的版本号格式..."
+        sed -i 's/PKG_VERSION:=\(.*\)-\(.*\)/PKG_VERSION:=\1.\2/' package/istore/luci/luci-app-store/Makefile
+        echo "修改后的版本号信息："
+        grep "PKG_VERSION:=" package/istore/luci/luci-app-store/Makefile
         
     - name: 开始编译
       run: |
