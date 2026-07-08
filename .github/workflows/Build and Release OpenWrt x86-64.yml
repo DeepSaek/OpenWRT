@@ -147,9 +147,12 @@ jobs:
       run: |
         cd openwrt
         echo "尝试修正 luci-app-store Makefile 的版本号格式..."
-        sed -i 's/PKG_VERSION:=\(.*\)-\(.*\)/PKG_VERSION:=\1.\2/' package/istore/luci/luci-app-store/Makefile
+        STORE_MAKEFILE="package/istore/luci/luci-app-store/Makefile"
+        STORE_VERSION=$(sed -n 's/^PKG_VERSION:=//p' "$STORE_MAKEFILE")
+        STORE_VERSION=$(printf '%s' "$STORE_VERSION" | sed -E 's/-r([0-9]+)$/.\1/; s/-([0-9]+)$/.\1/')
+        sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$STORE_VERSION/" "$STORE_MAKEFILE"
         echo "修改后的版本号信息："
-        grep "PKG_VERSION:=" package/istore/luci/luci-app-store/Makefile
+        grep "PKG_VERSION:=" "$STORE_MAKEFILE"
         
     - name: 开始编译
       run: |
