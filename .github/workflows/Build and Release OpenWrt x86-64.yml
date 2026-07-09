@@ -5,8 +5,6 @@ on:
     - cron: 0 20 * * *
 env:
   TZ: Asia/Shanghai
-  HELLOWORLD_COMMIT: 4c9db8282f27fa030932b2d66010cff5158aaf60
-  SHADOWSOCKS_LIBEV_MIRROR_HASH: b56d015394a3217750ec232570e012461a30af17de20d5598c3b026c8fcaa5b5
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -83,9 +81,7 @@ jobs:
         git checkout $LATEST_TAG
         rm -rf package/helloworld
         git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
-        git -C package/helloworld fetch --depth=1 origin "$HELLOWORLD_COMMIT"
-        git -C package/helloworld checkout "$HELLOWORLD_COMMIT"
-        sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$SHADOWSOCKS_LIBEV_MIRROR_HASH/" package/helloworld/shadowsocks-libev/Makefile
+        git -C package/helloworld rev-parse HEAD
         grep -E "PKG_SOURCE_VERSION|PKG_MIRROR_HASH" package/helloworld/shadowsocks-libev/Makefile
         git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         git clone https://github.com/openwrt/packages.git ../gogogo
@@ -121,7 +117,32 @@ jobs:
         
     - name: 预下载软件包
       run: |
-        cd openwrt 
+        cd openwrt
+        SS_MAKEFILE="package/helloworld/shadowsocks-libev/Makefile"
+        SS_LOG="$(mktemp)"
+
+        set +e
+        make package/helloworld/shadowsocks-libev/download -j1 V=s 2>&1 | tee "$SS_LOG"
+        SS_STATUS=${PIPESTATUS[0]}
+        set -e
+
+        if [ "$SS_STATUS" -ne 0 ]; then
+            ACTUAL_HASH=$(grep -Eo 'got [a-f0-9]{64}' "$SS_LOG" | tail -n1 | awk '{print $2}')
+
+            if grep -q "Hash mismatch" "$SS_LOG" && [ -n "$ACTUAL_HASH" ]; then
+                echo "修正 shadowsocks-libev PKG_MIRROR_HASH 为 $ACTUAL_HASH"
+                if grep -q '^PKG_MIRROR_HASH:=' "$SS_MAKEFILE"; then
+                    sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$ACTUAL_HASH/" "$SS_MAKEFILE"
+                else
+                    echo "PKG_MIRROR_HASH:=$ACTUAL_HASH" >> "$SS_MAKEFILE"
+                fi
+                grep -E "PKG_SOURCE_VERSION|PKG_MIRROR_HASH" "$SS_MAKEFILE"
+                make package/helloworld/shadowsocks-libev/download -j1 V=s
+            else
+                exit "$SS_STATUS"
+            fi
+        fi
+
         make download -j$(nproc) || make download -j1 V=s
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;

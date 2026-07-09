@@ -4,8 +4,6 @@ on:
 
 env:
   TZ: Asia/Shanghai
-  HELLOWORLD_COMMIT: 4c9db8282f27fa030932b2d66010cff5158aaf60
-  SHADOWSOCKS_LIBEV_MIRROR_HASH: b56d015394a3217750ec232570e012461a30af17de20d5598c3b026c8fcaa5b5
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -56,9 +54,7 @@ jobs:
         git checkout $LATEST_TAG
         rm -rf package/helloworld
         git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
-        git -C package/helloworld fetch --depth=1 origin "$HELLOWORLD_COMMIT"
-        git -C package/helloworld checkout "$HELLOWORLD_COMMIT"
-        sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$SHADOWSOCKS_LIBEV_MIRROR_HASH/" package/helloworld/shadowsocks-libev/Makefile
+        git -C package/helloworld rev-parse HEAD
         grep -E "PKG_SOURCE_VERSION|PKG_MIRROR_HASH" package/helloworld/shadowsocks-libev/Makefile
         git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         git clone https://github.com/openwrt/packages.git ../gogogo
