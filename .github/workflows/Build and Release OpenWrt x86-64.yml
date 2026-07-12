@@ -118,30 +118,41 @@ jobs:
     - name: 预下载软件包
       run: |
         cd openwrt
-        SS_MAKEFILE="package/helloworld/shadowsocks-libev/Makefile"
-        SS_LOG="$(mktemp)"
 
-        set +e
-        make package/helloworld/shadowsocks-libev/download -j1 V=s 2>&1 | tee "$SS_LOG"
-        SS_STATUS=${PIPESTATUS[0]}
-        set -e
+        repair_mirror_hash() {
+            PACKAGE_PATH="$1"
+            PACKAGE_NAME="${PACKAGE_PATH##*/}"
+            PACKAGE_MAKEFILE="$PACKAGE_PATH/Makefile"
+            PACKAGE_LOG="$(mktemp)"
 
-        if [ "$SS_STATUS" -ne 0 ]; then
-            ACTUAL_HASH=$(grep -Eo 'got [a-f0-9]{64}' "$SS_LOG" | tail -n1 | awk '{print $2}')
+            set +e
+            make "$PACKAGE_PATH/download" -j1 V=s 2>&1 | tee "$PACKAGE_LOG"
+            PACKAGE_STATUS=${PIPESTATUS[0]}
+            set -e
 
-            if grep -q "Hash mismatch" "$SS_LOG" && [ -n "$ACTUAL_HASH" ]; then
-                echo "修正 shadowsocks-libev PKG_MIRROR_HASH 为 $ACTUAL_HASH"
-                if grep -q '^PKG_MIRROR_HASH:=' "$SS_MAKEFILE"; then
-                    sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$ACTUAL_HASH/" "$SS_MAKEFILE"
+            if [ "$PACKAGE_STATUS" -ne 0 ]; then
+                ACTUAL_HASH=$(grep -Eo 'got [a-f0-9]{64}' "$PACKAGE_LOG" | tail -n1 | awk '{print $2}')
+
+                if grep -q "Hash mismatch" "$PACKAGE_LOG" && [ -n "$ACTUAL_HASH" ]; then
+                    echo "修正 $PACKAGE_NAME PKG_MIRROR_HASH 为 $ACTUAL_HASH"
+                    if grep -q '^PKG_MIRROR_HASH:=' "$PACKAGE_MAKEFILE"; then
+                        sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$ACTUAL_HASH/" "$PACKAGE_MAKEFILE"
+                    else
+                        echo "PKG_MIRROR_HASH:=$ACTUAL_HASH" >> "$PACKAGE_MAKEFILE"
+                    fi
+                    grep -E "PKG_SOURCE_VERSION|PKG_MIRROR_HASH" "$PACKAGE_MAKEFILE"
+                    make "$PACKAGE_PATH/download" -j1 V=s
                 else
-                    echo "PKG_MIRROR_HASH:=$ACTUAL_HASH" >> "$SS_MAKEFILE"
+                    rm -f "$PACKAGE_LOG"
+                    return "$PACKAGE_STATUS"
                 fi
-                grep -E "PKG_SOURCE_VERSION|PKG_MIRROR_HASH" "$SS_MAKEFILE"
-                make package/helloworld/shadowsocks-libev/download -j1 V=s
-            else
-                exit "$SS_STATUS"
             fi
-        fi
+
+            rm -f "$PACKAGE_LOG"
+        }
+
+        repair_mirror_hash package/helloworld/shadowsocks-libev
+        repair_mirror_hash package/helloworld/simple-obfs
 
         make download -j$(nproc) || make download -j1 V=s
         find dl -size -1024c -exec ls -l {} \;
